@@ -1,92 +1,28 @@
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local Camera = workspace.CurrentCamera
-local LocalPlayer = Players.LocalPlayer
-local SkullCache = {}
-
-local SkullShape = {
-    {{0.2,0.2},{0.4,0.05}}, {{0.4,0.05},{0.6,0.05}}, {{0.6,0.05},{0.8,0.2}},
-    {{0.8,0.2},{0.8,0.6}},  {{0.8,0.6},{0.2,0.6}},  {{0.2,0.6},{0.2,0.2}},
-    {{0.3,0.3},{0.45,0.3}}, {{0.45,0.3},{0.45,0.45}},{{0.45,0.45},{0.3,0.45}},
-    {{0.3,0.45},{0.3,0.3}}, {{0.55,0.3},{0.7,0.3}}, {{0.7,0.3},{0.7,0.45}},
-    {{0.7,0.45},{0.55,0.45}},{{0.55,0.45},{0.55,0.3}},{{0.5,0.5},{0.5,0.6}},
-    {{0.3,0.65},{0.7,0.65}},{{0.3,0.65},{0.3,0.75}},{{0.4,0.65},{0.4,0.75}},
-    {{0.5,0.65},{0.5,0.75}},{{0.6,0.65},{0.6,0.75}},{{0.7,0.65},{0.7,0.75}},
-    {{0.3,0.75},{0.7,0.75}}
-}
-
-local function isEnemy(player)
-    if player == LocalPlayer or not player.Character then return false end
-    local myTeam = LocalPlayer.Team
-    local pTeam = player.Team
-    if not myTeam or not pTeam then return true end
-    return myTeam ~= pTeam
+local P,R,C=game:GetService("Players"),game:GetService("RunService"),workspace.CurrentCamera local L=P.LocalPlayer local O={}
+local R15={{"Head","UpperTorso"},{"UpperTorso","LowerTorso"},{"UpperTorso","LeftUpperArm"},{"LeftUpperArm","LeftLowerArm"},{"LeftLowerArm","LeftHand"},{"UpperTorso","RightUpperArm"},{"RightUpperArm","RightLowerArm"},{"RightLowerArm","RightHand"},{"LowerTorso","LeftUpperLeg"},{"LeftUpperLeg","LeftLowerLeg"},{"LeftLowerLeg","LeftFoot"},{"LowerTorso","RightUpperLeg"},{"RightUpperLeg","RightLowerLeg"},{"RightLowerLeg","RightFoot"}}
+local R6={{"Head","Torso"},{"Torso","Left Arm"},{"Torso","Right Arm"},{"Torso","Left Leg"},{"Torso","Right Leg"}}
+local function iE(p)if p==L or not p.Character then return false end local a,b=L.Team,p.Team return a~=b end
+local function cln(p)if O[p]then for _,d in pairs(O[p])do if type(d)=="table" then for _,l in pairs(d)do if l.Remove then l:Remove()end end elseif d.Remove then d:Remove()end end O[p]=nil end end
+R.RenderStepped:Connect(function()
+for _,p in pairs(P:GetPlayers())do local ch=p.Character local r=ch and ch:FindFirstChild("HumanoidRootPart")local u=ch and ch:FindFirstChild("Humanoid")local hd=ch and ch:FindFirstChild("Head")
+if iE(p)and r and u and u.Health>0 and hd then
+local d=(C.CFrame.Position-r.Position).Magnitude
+if d<=400 then
+if not O[p]or O[p].Chr~=ch then cln(p)O[p]={Chr=ch,Ln={},Cross={}}for i=1,15 do local l=Drawing.new("Line")l.Thickness=1.5 O[p].Ln[i]=l end for i=1,2 do local l=Drawing.new("Line")l.Thickness=2 l.Color=Color3.fromRGB(255,0,0)O[p].Cross[i]=l end end
+local o=O[p]local isR15=(ch:FindFirstChild("UpperTorso")~=nil)local bList=isR15 and R15 or R6
+local col=Color3.fromRGB(0,255,255)
+local idx=1
+for _,v in ipairs(bList)do local p1=ch:FindFirstChild(v[1])local p2=ch:FindFirstChild(v[2])
+if p1 and p2 and idx<=15 then local s1,on1=C:WorldToViewportPoint(p1.Position)local s2,on2=C:WorldToViewportPoint(p2.Position)
+if on1 and on2 then o.Ln[idx].From=Vector2.new(s1.X,s1.Y)o.Ln[idx].To=Vector2.new(s2.X,s2.Y)
+-- 动态渐变：上半身青色，下半身偏红
+if v[1]=="Head"or v[1]=="UpperTorso"then o.Ln[idx].Color=Color3.fromRGB(0,255,255)else o.Ln[idx].Color=Color3.fromRGB(255,50,50)end
+o.Ln[idx].Visible=true idx=idx+1 else o.Ln[idx].Visible=false end end end
+for i=idx,15 do o.Ln[i].Visible=false end
+-- 十字星瞄准爆头
+local hs,hon=C:WorldToViewportPoint(hd.Position)if hon then local sz=6 local cx,cy=hs.X,hs.Y o.Cross[1].From=Vector2.new(cx-sz,cy)o.Cross[1].To=Vector2.new(cx+sz,cy)o.Cross[1].Visible=true o.Cross[2].From=Vector2.new(cx,cy-sz)o.Cross[2].To=Vector2.new(cx,cy+sz)o.Cross[2].Visible=true else o.Cross[1].Visible=false o.Cross[2].Visible=false end
+else cln(p)end
+else cln(p)end
 end
-
-local function cleanPlayer(player)
-    if SkullCache[player] then
-        for _, line in pairs(SkullCache[player]) do
-            if line.Remove then line:Remove() end
-        end
-        SkullCache[player] = nil
-    end
-end
-
-RunService.RenderStepped:Connect(function()
-    for _, player in pairs(Players:GetPlayers()) do
-        local char = player.Character
-        local head = char and char:FindFirstChild("Head")
-        local humanoid = char and char:FindFirstChild("Humanoid")
-
-        if isEnemy(player) and head and humanoid and humanoid.Health > 0 then
-            if not SkullCache[player] then
-                SkullCache[player] = {
-                    Lines = {},
-                    TargetPos = nil, -- 用于平滑位置
-                    CurrentPos = nil
-                }
-                for i = 1, #SkullShape do
-                    local line = Drawing.new("Line")
-                    line.Thickness = 1.5
-                    line.Color = Color3.fromRGB(255, 255, 255)
-                    line.Transparency = 0.2
-                    table.insert(SkullCache[player].Lines, line)
-                end
-            end
-
-            local screenPos, onScreen = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 1.5, 0))
-            local cache = SkullCache[player]
-
-            if onScreen then
-                -- 防高速抖动：Lerp 平滑靠拢（0.4 是跟随灵敏度，越大越紧，越小越平滑）
-                local smoothFactor = 0.4
-                if not cache.TargetPos then
-                    cache.TargetPos = screenPos
-                    cache.CurrentPos = screenPos
-                else
-                    cache.TargetPos = screenPos
-                    cache.CurrentPos = cache.CurrentPos:Lerp(cache.TargetPos, smoothFactor)
-                end
-
-                local size = 25
-                local baseX = cache.CurrentPos.X - size / 2
-                local baseY = cache.CurrentPos.Y - size / 2
-
-                for i, points in ipairs(SkullShape) do
-                    local line = cache.Lines[i]
-                    line.From = Vector2.new(baseX + points[1][1] * size, baseY + points[1][2] * size)
-                    line.To = Vector2.new(baseX + points[2][1] * size, baseY + points[2][2] * size)
-                    line.Visible = true
-                end
-            else
-                for _, line in pairs(cache.Lines) do
-                    line.Visible = false
-                end
-            end
-        else
-            cleanPlayer(player)
-        end
-    end
 end)
-
-Players.PlayerRemoving:Connect(cleanPlayer)
+P.PlayerRemoving:Connect(cln)
