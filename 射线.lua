@@ -1,63 +1,110 @@
-local P,R,C,U=game:GetService("Players"),game:GetService("RunService"),workspace.CurrentCamera,game:GetService("UserInputService")local L=P.LocalPlayer local E={Tracer=true,TrPos="Bottom"}local O={}local TrDrop,TrMenuBg,TrBtns
-local function isE(p)if p==L or not p.Character then return false end local m,t=L.Team,p.Team if not m or not t then return true end return m~=t end
-local Gui=Instance.new("ScreenGui",L:WaitForChild("PlayerGui"))Gui.Name="HolyUI"Gui.ResetOnSpawn=false
--- 切换按钮 (白底红边)
-TrDrop=Instance.new("TextButton",Gui)TrDrop.Size=UDim2.new(0,110,0,32)TrDrop.Position=UDim2.new(0.5,-55,0,50)TrDrop.BackgroundColor3=Color3.fromRGB(255,255,255)TrDrop.BackgroundTransparency=0.1 TrDrop.TextColor3=Color3.fromRGB(255,50,50)TrDrop.Font=Enum.Font.GothamBold TrDrop.TextSize=14 TrDrop.Text="射线位置: 底部"TrDrop.ZIndex=100
-Instance.new("UICorner",TrDrop).CornerRadius=UDim.new(0,6)
-local Str=Instance.new("UIStroke",TrDrop)Str.Color=Color3.fromRGB(255,50,50)Str.Thickness=1 Str.Transparency=0.3
--- 下拉菜单
-TrMenuBg=Instance.new("Frame",Gui)TrMenuBg.Size=UDim2.new(0,110,0,90)TrMenuBg.Position=UDim2.new(0.5,-55,0,85)TrMenuBg.BackgroundColor3=Color3.fromRGB(20,20,25)TrMenuBg.BackgroundTransparency=0.1 TrMenuBg.Visible=false TrMenuBg.ZIndex=99
-Instance.new("UICorner",TrMenuBg).CornerRadius=UDim.new(0,6)
-Instance.new("UIStroke",TrMenuBg).Color=Color3.fromRGB(255,50,50)
-TrBtns={}
-local opts={"顶部","中心","底部"}
-for i,v in ipairs(opts)do 
-    local b=Instance.new("TextButton",TrMenuBg)b.Size=UDim2.new(1,0,0,30)b.Position=UDim2.new(0,0,0,(i-1)*30)b.BackgroundTransparency=1 b.Text=v b.TextColor3=Color3.fromRGB(255,255,255)b.Font=Enum.Font.Gotham TrBtns[i]=b
-    b.MouseButton1Click:Connect(function()
-        local pos = v -- 修复变量作用域
-        E.TrPos=pos 
-        TrDrop.Text="射线位置: "..pos 
-        TrMenuBg.Visible=false 
-    end)
+local _0xP = game:GetService("Players")
+local _0xR = game:GetService("RunService")
+local _0xC = workspace.CurrentCamera
+local _0xL = _0xP.LocalPlayer
+local _0xD = {}
+
+-- ================== 射线终极配置区 ==================
+-- 【起点位置】：可填 "Top" (顶部), "Center" (准星中心), "Bottom" (底部)
+local _0xPosMode = "Bottom" 
+local _0xMaxDist = 1000
+-- ====================================================
+
+local function _0xIsEnemy(_0xPlr)
+    if _0xPlr == _0xL or not _0xPlr.Character then return false end
+    local _0xM, _0xT = _0xL.Team, _0xPlr.Team
+    if not _0xM or not _0xT then return true end
+    return _0xM ~= _0xT
 end
-TrDrop.MouseButton1Click:Connect(function()TrMenuBg.Visible=not TrMenuBg.Visible end)
--- 点击空白处关闭
-U.InputBegan:Connect(function(input)
-    if TrMenuBg.Visible then 
-        if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then 
-            local p=input.Position 
-            if not (p.X>=TrMenuBg.AbsolutePosition.X and p.X<=TrMenuBg.AbsolutePosition.X+TrMenuBg.AbsoluteSize.X and p.Y>=TrMenuBg.AbsolutePosition.Y and p.Y<=TrMenuBg.AbsolutePosition.Y+TrMenuBg.AbsoluteSize.Y) and not (p.X>=TrDrop.AbsolutePosition.X and p.X<=TrDrop.AbsolutePosition.X+TrDrop.AbsoluteSize.X and p.Y>=TrDrop.AbsolutePosition.Y and p.Y<=TrDrop.AbsolutePosition.Y+TrDrop.AbsoluteSize.Y) then 
-                TrMenuBg.Visible=false 
-            end 
-        end 
-    end 
+
+local function _0xClean(_0xPlr)
+    if _0xD[_0xPlr] then
+        for _, obj in pairs(_0xD[_0xPlr]) do
+            if obj.Remove then obj:Remove() end
+        end
+        _0xD[_0xPlr] = nil
+    end
+end
+
+_0xR.RenderStepped:Connect(function()
+    local _0xTM = tick() * 15 -- 凶悍震颤频率
+    local _0xMyChar = _0xL.Character
+    local _0xMyRoot = _0xMyChar and _0xMyChar:FindFirstChild("HumanoidRootPart")
+    if not _0xMyRoot then return end
+    
+    -- 【动态计算起点坐标】
+    local _0xStart = Vector2.new(_0xC.ViewportSize.X / 2, _0xC.ViewportSize.Y)
+    if _0xPosMode == "Top" then
+        _0xStart = Vector2.new(_0xC.ViewportSize.X / 2, 0)
+    elseif _0xPosMode == "Center" then
+        _0xStart = Vector2.new(_0xC.ViewportSize.X / 2, _0xC.ViewportSize.Y / 2)
+    end
+
+    for _, _0xPlr in pairs(_0xP:GetPlayers()) do
+        local _0xChar = _0xPlr.Character
+        local _0xHum = _0xChar and _0xChar:FindFirstChild("Humanoid")
+        local _0xHead = _0xChar and _0xChar:FindFirstChild("Head")
+        local _0xRoot = _0xChar and _0xChar:FindFirstChild("HumanoidRootPart")
+        
+        if _0xIsEnemy(_0xPlr) and _0xChar and _0xHum and _0xHum.Health > 0 and _0xHead and _0xRoot then
+            local _0xDist = (_0xMyRoot.Position - _0xRoot.Position).Magnitude
+            
+            if _0xDist <= _0xMaxDist then
+                if not _0xD[_0xPlr] or _0xD[_0xPlr].Char ~= _0xChar then
+                    _0xClean(_0xPlr)
+                    _0xD[_0xPlr] = {
+                        Char = _0xChar,
+                        Glow = Drawing.new("Line"),
+                        Core = Drawing.new("Line")
+                    }
+                    _0xD[_0xPlr].Glow.Thickness = 3
+                    _0xD[_0xPlr].Glow.Transparency = 0.5
+                    _0xD[_0xPlr].Core.Thickness = 1
+                    _0xD[_0xPlr].Core.Transparency = 0.1
+                end
+                
+                local _0xData = _0xD[_0xPlr]
+                local _0xScreen, _0xOn = _0xC:WorldToViewportPoint(_0xHead.Position)
+                
+                if _0xOn then
+                    -- 距离越近越凶
+                    local _0xFerocity = math.clamp(1 - (_0xDist / _0xMaxDist), 0, 1)
+                    local _0xShake = math.sin(_0xTM) * (2 + _0xFerocity * 4)
+                    local _0xEnd = Vector2.new(_0xScreen.X + _0xShake, _0xScreen.Y + _0xShake)
+                    
+                    -- 凶悍蓝光配色
+                    local _0xBaseBlue = Color3.fromRGB(0, 50, 255)
+                    local _0xBrightBlue = Color3.fromRGB(0, 200, 255)
+                    local _0xFinalColor = _0xBaseBlue:Lerp(_0xBrightBlue, _0xFerocity)
+                    
+                    -- 如果距离极近（150以内），直接变刺眼的白
+                    if _0xDist < 150 then
+                         _0xFinalColor = Color3.fromRGB(255, 255, 255)
+                    end
+
+                    _0xData.Glow.From = _0xStart
+                    _0xData.Glow.To = _0xEnd
+                    _0xData.Glow.Color = _0xFinalColor
+                    _0xData.Glow.Visible = true
+                    
+                    _0xData.Core.From = _0xStart
+                    _0xData.Core.To = Vector2.new(_0xScreen.X, _0xScreen.Y)
+                    _0xData.Core.Color = Color3.fromRGB(255, 255, 255)
+                    _0xData.Core.Visible = true
+                else
+                    _0xData.Glow.Visible = false
+                    _0xData.Core.Visible = false
+                end
+            else
+                if _0xD[_0xPlr] then
+                    _0xD[_0xPlr].Glow.Visible = false
+                    _0xD[_0xPlr].Core.Visible = false
+                end
+            end
+        else
+            _0xClean(_0xPlr)
+        end
+    end
 end)
--- 圣堂红晕射线
-if Drawing then
-    R.RenderStepped:Connect(function()
-        for _,p in pairs(P:GetPlayers())do 
-            local ch=p.Character local hr=ch and ch:FindFirstChild("HumanoidRootPart")local hd=ch and ch:FindFirstChild("Head")local hm=ch and ch:FindFirstChild("Humanoid")
-            if isE(p)and hr and hd and hm and hm.Health>0 then 
-                if not O[p]then 
-                    O[p]={Line=Drawing.new("Line"),Glow=Drawing.new("Line"),Dot=Drawing.new("Circle")}
-                    O[p].Line.Thickness=1 O[p].Line.Transparency=0.2 O[p].Line.Color=Color3.fromRGB(255,255,255)
-                    O[p].Glow.Thickness=3.5 O[p].Glow.Transparency=0.7 O[p].Glow.Color=Color3.fromRGB(255,20,20)
-                    O[p].Dot.Thickness=1 O[p].Dot.Filled=true O[p].Dot.Radius=3 O[p].Dot.Color=Color3.fromRGB(255,0,0)
-                end 
-                local o=O[p]local hp,on=C:WorldToViewportPoint(hd.Position)
-                if on then 
-                    local sx,sy=C.ViewportSize.X/2,C.ViewportSize.Y 
-                    if E.TrPos=="Top"then sy=0 elseif E.TrPos=="Center"then sy=C.ViewportSize.Y/2 end
-                    o.Line.From,o.Line.To=Vector2.new(sx,sy),Vector2.new(hp.X,hp.Y)o.Line.Visible=true
-                    o.Glow.From,o.Glow.To=Vector2.new(sx,sy),Vector2.new(hp.X,hp.Y)o.Glow.Visible=true
-                    o.Dot.Position=Vector2.new(hp.X,hp.Y)o.Dot.Visible=true
-                else 
-                    o.Line.Visible=false o.Glow.Visible=false o.Dot.Visible=false 
-                end 
-            elseif O[p]then 
-                O[p].Line.Visible=false O[p].Glow.Visible=false O[p].Dot.Visible=false 
-            end 
-        end 
-    end)
-end
-P.PlayerRemoving:Connect(function(p)if O[p]then for _,v in pairs(O[p])do if v.Remove then v:Remove()end end O[p]=nil end end)
+
+_0xP.PlayerRemoving:Connect(_0xClean)
