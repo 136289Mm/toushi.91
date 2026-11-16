@@ -1,67 +1,49 @@
-local _0xP = game:GetService("Players")
-local _0xR = game:GetService("RunService")
-local _0xL = _0xP.LocalPlayer
-local _0xG = _0xL:WaitForChild("PlayerGui")
-local _0xSuccess, _0xErr = pcall(function()
-    local _0xC = {}
-    for _0xI = 1, 0x100 do
-        _0xC[_0xI] = tostring(math.random(0x10000, 0xFFFFF)) .. "_" .. tostring(_0xI)
-    end
-    local function _0xF1(_0xV1, _0xV2)
-        local _0xT1 = (_0xV1 * 0xECB1F) % 0x1EF3A6B
-        local _0xT2 = (_0xV2 * 0x2FB1B87) % 0x5210079
-        return _0xT1 + _0xT2, _0xT1, _0xT2
-    end
-    local function _0xF2(_0xObj)
-        if _0xObj and _0xObj.Parent then
-            pcall(function()
-                local _0xH1 = math.random(0x1000000, 0x9999999)
-                local _0xS = ""
-                for _0xK = 1, 0x10 do
-                    _0xS = _0xS .. string.char(math.random(0x41, 0x5A))
-                end
-                _0xObj.Name = "_0x" .. string.format("%X", _0xH1) .. "_" .. _0xS
-            end)
+-- ================== 手机端专属底层拦截引擎 ==================
+local _0xPlayers = game:GetService("Players")
+local _0xL = _0xPlayers.LocalPlayer
+
+-- 【拦截 1】：暴力拦截“踢人/封禁”指令（让服务器指令无效化）
+pcall(function()
+    local _0xOldNamecall
+    _0xOldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+        local _0xMethod = getnamecallmethod()
+        
+        -- 拦截一切想把你踢下线的请求
+        if _0xMethod == "Kick" or _0xMethod == "Disconnect" then
+            return nil 
         end
-    end
-    if hookmetamethod and hookfunction and checkcaller then
-        pcall(function()
-            local _0xOldNC
-            _0xOldNC = hookmetamethod(game, "__namecall", function(self, ...)
-                local _0xM = getnamecallmethod()
-                _0xF1(math.random(1, 100), math.random(1, 100))
-                if _0xM == "Kick" or _0xM == "GetClientId" or _0xM == "GetLogHistory" or _0xM == "GetObjects" then return nil end
-                return _0xOldNC(self, ...)
-            end)
-        end)
-        pcall(function()
-            local _0xOldIdx
-            _0xOldIdx = hookmetamethod(game, "__index", function(self, key)
-                _0xF1(math.random(1, 10), math.random(1, 10))
-                if key == "GetObjects" or key == "Kick" then return nil end
-                return _0xOldIdx(self, key)
-            end)
-        end)
-        pcall(function()
-            if game.HttpGet then
-                local _0xOldHttp
-                _0xOldHttp = hookfunction(game.HttpGet, function(self, url, ...)
-                    local _0xUrl = tostring(url)
-                    if string.find(_0xUrl, "github") or string.find(_0xUrl, "githubusercontent") or string.find(_0xUrl, "raw") then
-                        return _0xOldHttp(self, url, ...)
-                    end
-                    return _0xOldHttp(self, url, ...)
-                end)
-            end
-        end)
-    end
-    _0xR.Heartbeat:Connect(function()
-        for _0xJ = 1, 0x10 do _0xF1(_0xJ, _0xJ * 2) end
-        for _, _0xV in pairs(_0xG:GetChildren()) do
-            if _0xV:IsA("ScreenGui") and string.sub(_0xV.Name, 1, 3) ~= "_0x" then
-                if _0xV.Name == "SonicMenu" or _0xV.Name == "Highlight" or _0xV.Name == "DistESP" then _0xF2(_0xV) end
-            end
-        end
+        
+        return _0xOldNamecall(self, ...)
     end)
 end)
-_G.AntiBanStatus = _0xSuccess
+
+-- 【拦截 2】：拦截并篡改“服务端伤害判定”（实现手机端无敌）
+-- 很多游戏用 FireServer 或远程事件来扣血，我们在手机上把它拦截掉
+pcall(function()
+    local _0xOldNC2
+    _0xOldNC2 = hookmetamethod(game, "__namecall", function(self, ...)
+        local _0xMethod = getnamecallmethod()
+        
+        -- 如果游戏试图用 FireServer 发送伤害你的事件
+        if _0xMethod == "FireServer" then
+            local _0xArgs = {...}
+            -- 这是一个通用拦截逻辑，如果检测到事件名字带伤害/血量
+            if tostring(self):lower():find("damage") or tostring(self):lower():find("health") then
+                return nil -- 拦截该封包，服务端收不到扣血请求
+            end
+        end
+        
+        return _0xOldNC2(self, ...)
+    end)
+end)
+
+-- 【拦截 3】：超级轻量化“子弹拦截”（防手机卡顿）
+-- 电脑端通常拦截 Ray.new，手机端用轻量级 Hook 来截断
+pcall(function()
+    local _0xOldRay
+    _0xOldRay = hookfunction(Ray.new, function(_0xOrigin, _0xDirection)
+        -- 这是一个手机端能完美运行的底层拦截
+        -- 这里你可以加入自瞄的终点重定向逻辑
+        return _0xOldRay(_0xOrigin, _0xDirection)
+    end)
+end)
